@@ -256,7 +256,13 @@ function renderFicha(tipo){
         </button>
       </div>
       <div class="card" id="fichaCard"></div>
-      <a class="foot-link" href="#painel">Acesso da equipe</a>
+      ${tipo==='decisao' && session ? `
+        <div style="display:flex;justify-content:center;gap:26px;margin-top:38px">
+          <a class="foot-link" style="margin-top:0" href="#visitante">Ficha de Visitante</a>
+          ${session.role!=='conselheiro' ? `<a class="foot-link" style="margin-top:0" href="#painel">Painel</a>` : ``}
+          <a class="foot-link" style="margin-top:0" href="#" onclick="event.preventDefault();sair()">Sair</a>
+        </div>` : `
+        <a class="foot-link" href="#painel">Acesso da equipe</a>`}
     </div>`;
   if(tipo==="visitante") formVisitante();
   else if(session) formDecisao();
@@ -281,7 +287,7 @@ window.entrarGate = async ()=>{
   if(!role){ $("#g_err").textContent = "PIN incorreto."; return; }
   session = { role };
   sessionStorage.setItem("rec_sess", JSON.stringify(session));
-  formDecisao();
+  renderFicha("decisao");
 };
 
 function chipsHtml(id, items, multi){
