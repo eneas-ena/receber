@@ -164,7 +164,7 @@
 <script>
 /* ================= CONFIGURAÇÃO ================= */
 const SUPABASE_URL = "https://ghjbljypxksubmcsvaig.supabase.co";
-const SUPABASE_KEY = "sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby"; // Settings → API Keys → Publishable key
+const SUPABASE_KEY = "sb_publishable_COLE_SUA_CHAVE_AQUI"; // Settings → API Keys → Publishable key
 
 // PINs (SHA-256). Padrões: Master 1010 · Homens 2020 · Mulheres 3030 · Jovens 4040 · Adolescentes 5050
 // Para trocar: gere o hash no console do navegador com  await hashPin("NOVOPIN")
@@ -238,12 +238,13 @@ function renderFicha(tipo){
     <div class="arch-hero">
       <div class="door" aria-hidden="true"></div>
       <h1>${IGREJA}</h1>
-      <p>Que bom ter você aqui. Seja bem-vindo!</p>
+      <p>${tipo==='visitante' ? 'Que bom ter você aqui. Seja bem-vindo!' : 'Registro de decisão — preenchido pelo conselheiro'}</p>
     </div>
     <div class="wrap">
-      <div class="ficha-switch" role="tablist">
-        <button role="tab" class="${tipo==='visitante'?'on':''}" onclick="location.hash='#visitante'">Ficha de Visitante</button>
-        <button role="tab" class="${tipo==='decisao'?'on':''}" onclick="location.hash='#decisao'">Ficha de Decisão</button>
+      <div class="ficha-switch" role="heading" aria-level="2">
+        <button class="on" style="cursor:default">
+          ${tipo==='visitante' ? 'Ficha de Visitante' : 'Ficha de Decisão · uso da equipe'}
+        </button>
       </div>
       <div class="card" id="fichaCard"></div>
       <a class="foot-link" href="#painel">Acesso da equipe</a>
@@ -485,6 +486,7 @@ function drawKanban(){
     html += `<div class="filterbar">
       <button class="fchip ${!fRede?'on':''}" onclick="fRede='';drawTab('Decisões')">Todas as Redes</button>
       ${REDES.map(r=>`<button class="fchip ${fRede===r?'on':''}" onclick="fRede='${r}';drawTab('Decisões')">${r}</button>`).join("")}
+      <button class="btn-s gold" onclick="window.open('#decisao','_blank')">+ Nova ficha de decisão</button>
     </div>`;
   }
   html += `<div class="kanban">`;
