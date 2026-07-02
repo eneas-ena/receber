@@ -149,6 +149,14 @@
     min-width:2px;transition:width .5s}
   .bar-row .bn{width:34px;font-weight:700;color:var(--gold-light)}
 
+  /* modal de edição */
+  .modal-bg{position:fixed;inset:0;background:rgba(5,10,20,.72);display:flex;align-items:center;
+    justify-content:center;z-index:60;padding:16px}
+  .modal{background:var(--navy-2);border:1px solid var(--gold-dim);border-radius:var(--radius);
+    padding:20px 18px;max-width:430px;width:100%;max-height:88vh;overflow:auto}
+  .modal h3{font-family:'Alegreya Sans',sans-serif;letter-spacing:0;font-size:1.05rem}
+  .modal label{color:var(--gold-light);font-size:.88rem}
+
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);
     background:var(--gold);color:var(--navy);font-weight:700;padding:12px 22px;border-radius:999px;
     box-shadow:0 6px 20px rgba(0,0,0,.4);transition:transform .3s;z-index:99;font-size:.92rem}
@@ -166,14 +174,15 @@
 const SUPABASE_URL = "https://ghjbljypxksubmcsvaig.supabase.co";
 const SUPABASE_KEY = "sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby";
 
-// PINs (SHA-256). Padrões: Master 1010 · Homens 2020 · Mulheres 3030 · Jovens 4040 · Adolescentes 5050
+// PINs (SHA-256). Padrões: Master 1010 · Homens 2020 · Mulheres 3030 · Jovens 4040 · Adolescentes 5050 · Conselheiro 6060
 // Para trocar: gere o hash no console do navegador com  await hashPin("NOVOPIN")
 const PINS = {
   "7a5df5ffa0dec2228d90b8d0a0f1b0767b748b0a41314c123075b8289e4e053f": "master",
   "73a2af8864fc500fa49048bf3003776c19938f360e56bd03663866fb3087884a": "Homens",
   "b74b7e3fcb623d805dacf98db27530f845760c47e3b0faa702b84e9ff3902c37": "Mulheres",
   "b411746bdf09bde7f1fe70ddc8fa57241a0cb79d14d6e9c27e598635ca7dae4d": "Jovens",
-  "3f95b1b8a32c2c0251dfdbc3c8a30aab6d6e680cf0ef03e8af84a65dff0c4a85": "Adolescentes"
+  "3f95b1b8a32c2c0251dfdbc3c8a30aab6d6e680cf0ef03e8af84a65dff0c4a85": "Adolescentes",
+  "060e33205a731400c2eb92bc12cf921a4e44cf1851d216f144337dd6ec5350a7": "conselheiro"
 };
 
 const IGREJA = "Igreja Vidas";
@@ -249,8 +258,31 @@ function renderFicha(tipo){
       <div class="card" id="fichaCard"></div>
       <a class="foot-link" href="#painel">Acesso da equipe</a>
     </div>`;
-  if(tipo==="visitante") formVisitante(); else formDecisao();
+  if(tipo==="visitante") formVisitante();
+  else if(session) formDecisao();
+  else gateDecisao();
 }
+
+/* Trava da Ficha de Decisão: só a equipe (qualquer PIN válido) preenche */
+function gateDecisao(){
+  $("#fichaCard").innerHTML = `
+    <p style="color:var(--ink-soft);font-size:.97rem">Esta ficha é preenchida pelo <b>conselheiro</b> junto com a pessoa. Digite o PIN da equipe para liberar.</p>
+    <label for="g_pin">PIN da equipe</label>
+    <input id="g_pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••"
+      style="text-align:center;letter-spacing:.4em;font-size:1.3rem"
+      onkeydown="if(event.key==='Enter')entrarGate()">
+    <button class="btn-main" onclick="entrarGate()">Liberar ficha</button>
+    <div id="g_err" style="color:var(--danger);text-align:center;margin-top:12px;min-height:1.2em;font-size:.9rem"></div>`;
+  $("#g_pin").focus();
+}
+window.entrarGate = async ()=>{
+  const h = await hashPin($("#g_pin").value.trim());
+  const role = PINS[h];
+  if(!role){ $("#g_err").textContent = "PIN incorreto."; return; }
+  session = { role };
+  sessionStorage.setItem("rec_sess", JSON.stringify(session));
+  formDecisao();
+};
 
 function chipsHtml(id, items, multi){
   return `<div class="chips" id="${id}">` + items.map(i=>
@@ -340,6 +372,7 @@ function telaSucesso(t, p){
 function renderPainel(){
   document.body.className = "panel";
   if(!session) return renderLogin();
+  if(session.role === "conselheiro"){ location.hash = "#decisao"; return; }
   const isMaster = session.role === "master";
   const tabs = isMaster ? ["Visitantes","Oração","Decisões","Resumo"] : ["Decisões"];
   const cur = sessionStorage.getItem("rec_tab") || tabs[0];
@@ -438,7 +471,8 @@ function visHtml(lista, visitas){
       <div class="rowbtns">
         <button class="btn-s ${v.boas_vindas?'':'gold'}" onclick="boasVindas('${v.id}')">
           ${v.boas_vindas?"✓ Boas-vindas enviada":"Enviar boas-vindas"}</button>
-        ${pedido?"":""}
+        <button class="btn-s" onclick="editarVis('${v.id}')">✏️ Editar</button>
+        <button class="btn-s" onclick="excluir('rec_visitantes','${v.id}')">🗑 Excluir</button>
       </div>
     </div>`;
   });
@@ -510,6 +544,8 @@ function drawKanban(){
         <div class="rowbtns">
           <button class="btn-s gold" onclick="encaminhar('${d.id}')">Encaminhar líder</button>
           <button class="btn-s" onclick="zapDireto('${d.id}')">WhatsApp</button>
+          ${isMaster?`<button class="btn-s" onclick="editarDec('${d.id}')">✏️</button>
+          <button class="btn-s" onclick="excluir('rec_decisoes','${d.id}')">🗑</button>`:""}
         </div>
         <div class="kmove">
           <button ${i===0?"disabled":""} onclick="mover('${d.id}',-1)" aria-label="Voltar etapa">◀</button>
@@ -522,6 +558,91 @@ function drawKanban(){
   html += `</div>`;
   $("#pbody").innerHTML = html;
 }
+/* ---- Editar / Excluir ---- */
+function abrirModal(html){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg"; bg.id = "modalBg";
+  bg.innerHTML = `<div class="modal">${html}</div>`;
+  bg.addEventListener("click", e=>{ if(e.target===bg) fecharModal(); });
+  document.body.appendChild(bg);
+}
+window.fecharModal = ()=>{ $("#modalBg")?.remove(); };
+
+function selHtml(id, items, val){
+  return `<select id="${id}">${items.map(i=>`<option ${i===val?'selected':''}>${i}</option>`).join("")}</select>`;
+}
+
+window.editarVis = id=>{
+  const v = cacheVis.find(x=>x.id===id); if(!v) return;
+  abrirModal(`
+    <h3 style="color:var(--gold-light)">Editar visitante</h3>
+    <label>Nome</label><input id="e_nome" value="${esc(v.nome)}">
+    <label>WhatsApp</label><input id="e_zap" inputmode="tel" value="${esc(v.whatsapp)}">
+    <label>Culto</label>${selHtml("e_culto", CULTOS, v.culto)}
+    <label>Descrição do pedido</label><textarea id="e_desc">${esc(v.pedido_descricao||"")}</textarea>
+    <div class="rowbtns" style="margin-top:16px">
+      <button class="btn-s gold" onclick="salvarVis('${id}')">Salvar</button>
+      <button class="btn-s" onclick="fecharModal()">Cancelar</button>
+    </div>`);
+};
+window.salvarVis = async id=>{
+  const v = cacheVis.find(x=>x.id===id); if(!v) return;
+  const dados = {
+    nome: $("#e_nome").value.trim(),
+    whatsapp: soDigitos($("#e_zap").value),
+    culto: $("#e_culto").value,
+    pedido_descricao: $("#e_desc").value.trim() || null
+  };
+  if(!dados.nome) return toast("Nome não pode ficar vazio");
+  if(dados.whatsapp.length<10) return toast("Confira o WhatsApp");
+  const { error } = await db.from("rec_visitantes").update(dados).eq("id",id);
+  if(error) return toast("Erro ao salvar");
+  Object.assign(v, dados);
+  fecharModal(); refreshVis(); toast("Ficha atualizada");
+};
+
+window.editarDec = id=>{
+  const d = cacheDec.find(x=>x.id===id); if(!d) return;
+  abrirModal(`
+    <h3 style="color:var(--gold-light)">Editar decisão</h3>
+    <label>Nome</label><input id="e_nome" value="${esc(d.nome)}">
+    <label>WhatsApp</label><input id="e_zap" inputmode="tel" value="${esc(d.whatsapp)}">
+    <label>Endereço</label><input id="e_end" value="${esc(d.endereco||"")}">
+    <label>Motivo</label>${selHtml("e_mot", MOTIVOS, d.motivo)}
+    <label>Rede</label>${selHtml("e_rede", REDES, d.rede)}
+    <label>Líder responsável</label><input id="e_lider" value="${esc(d.lider||"")}">
+    <div class="rowbtns" style="margin-top:16px">
+      <button class="btn-s gold" onclick="salvarDec('${id}')">Salvar</button>
+      <button class="btn-s" onclick="fecharModal()">Cancelar</button>
+    </div>`);
+};
+window.salvarDec = async id=>{
+  const d = cacheDec.find(x=>x.id===id); if(!d) return;
+  const dados = {
+    nome: $("#e_nome").value.trim(),
+    whatsapp: soDigitos($("#e_zap").value),
+    endereco: $("#e_end").value.trim() || null,
+    motivo: $("#e_mot").value,
+    rede: $("#e_rede").value,
+    lider: $("#e_lider").value.trim() || null
+  };
+  if(!dados.nome) return toast("Nome não pode ficar vazio");
+  if(dados.whatsapp.length<10) return toast("Confira o WhatsApp");
+  const { error } = await db.from("rec_decisoes").update(dados).eq("id",id);
+  if(error) return toast("Erro ao salvar");
+  Object.assign(d, dados);
+  fecharModal(); drawKanban(); toast("Ficha atualizada");
+};
+
+window.excluir = async (tabela, id)=>{
+  if(!confirm("Excluir esta ficha? Essa ação não pode ser desfeita.")) return;
+  const { error } = await db.from(tabela).delete().eq("id",id);
+  if(error) return toast("Erro ao excluir — rode o SQL de atualização");
+  if(tabela==="rec_visitantes"){ cacheVis = cacheVis.filter(x=>x.id!==id); refreshVis(); }
+  else { cacheDec = cacheDec.filter(x=>x.id!==id); drawKanban(); }
+  toast("Ficha excluída");
+};
+
 window.mover = async (id, dir)=>{
   const d = cacheDec.find(x=>x.id===id); if(!d) return;
   const i = STATUS.indexOf(d.status) + dir;
