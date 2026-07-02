@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>RECEBER · Igreja Vidas</title>
+<meta name="description" content="Acolhimento de visitantes e acompanhamento de decisões — Igreja Vidas">
+<meta name="theme-color" content="#0E1A2F">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --navy:#0E1A2F; --navy-2:#16263F; --navy-3:#1E3252;
+    --gold:#C9A227; --gold-light:#E7CE7E; --gold-dim:rgba(201,162,39,.28);
+    --parchment:#F6F1E4; --parchment-2:#FFFDF6; --ink:#1B2438; --ink-soft:#4A5570;
+    --ok:#3E9B6A; --warn:#C9722A; --danger:#B2452F;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{font-family:'Alegreya Sans',system-ui,sans-serif;font-size:17px;line-height:1.5;min-height:100vh}
+  button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none}
+  input,select,textarea{font-family:inherit;font-size:16px;width:100%;border-radius:10px;padding:11px 13px;border:1.5px solid rgba(27,36,56,.25);background:var(--parchment-2);color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
+  textarea{min-height:84px;resize:vertical}
+  label{display:block;font-weight:700;margin:16px 0 6px;font-size:.95rem;letter-spacing:.02em}
+  h1,h2,h3{font-family:'Cinzel',serif;letter-spacing:.04em}
+  a{color:inherit}
+  .hide{display:none!important}
+
+  /* ---------- PUBLIC (fichas) ---------- */
+  body.public{background:var(--parchment);color:var(--ink)}
+  .arch-hero{position:relative;background:var(--navy);color:var(--parchment);
+    border-radius:0 0 50% 50% / 0 0 26% 26%;
+    padding:34px 20px 54px;text-align:center;overflow:hidden}
+  .arch-hero::after{content:"";position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+    width:120px;height:3px;background:var(--gold);border-radius:2px}
+  .arch-hero .door{width:46px;height:58px;margin:0 auto 10px;border:3px solid var(--gold);
+    border-bottom:none;border-radius:26px 26px 0 0;position:relative}
+  .arch-hero .door::after{content:"";position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);
+    width:9px;height:9px;border-radius:50%;background:var(--gold-light)}
+  .arch-hero h1{font-size:1.5rem;color:var(--gold-light)}
+  .arch-hero p{opacity:.85;font-size:.98rem;margin-top:4px}
+  .wrap{max-width:520px;margin:0 auto;padding:0 18px 90px}
+  .ficha-switch{display:flex;gap:8px;margin:-26px 0 22px;position:relative;z-index:2}
+  .ficha-switch button{flex:1;padding:13px 8px;border-radius:12px;font-weight:700;font-size:.95rem;
+    background:var(--parchment-2);color:var(--ink-soft);border:1.5px solid rgba(27,36,56,.18);
+    box-shadow:0 3px 10px rgba(14,26,47,.10)}
+  .ficha-switch button.on{background:var(--navy);color:var(--gold-light);border-color:var(--navy)}
+  .card{background:var(--parchment-2);border:1.5px solid rgba(27,36,56,.12);border-radius:var(--radius);
+    padding:20px 18px;box-shadow:0 3px 14px rgba(14,26,47,.07)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .chip{padding:9px 15px;border-radius:999px;border:1.5px solid rgba(27,36,56,.3);
+    background:var(--parchment-2);color:var(--ink);font-weight:500;font-size:.93rem}
+  .chip.on{background:var(--navy);color:var(--gold-light);border-color:var(--navy)}
+  .btn-main{display:block;width:100%;margin-top:26px;padding:15px;border-radius:12px;
+    background:var(--gold);color:var(--navy);font-weight:700;font-size:1.05rem;letter-spacing:.02em;
+    box-shadow:0 4px 12px rgba(201,162,39,.35)}
+  .btn-main:disabled{opacity:.55;cursor:default}
+  .success{text-align:center;padding:44px 20px}
+  .success .door{width:64px;height:80px;margin:0 auto 18px;border:3px solid var(--gold);
+    border-bottom:none;border-radius:34px 34px 0 0;position:relative}
+  .success .door::after{content:"";position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);
+    width:12px;height:12px;border-radius:50%;background:var(--gold)}
+  .success h2{font-size:1.35rem;margin-bottom:10px}
+  .success p{color:var(--ink-soft);max-width:340px;margin:0 auto 26px}
+  .foot-link{display:block;text-align:center;margin-top:38px;color:var(--ink-soft);font-size:.86rem;
+    text-decoration:none;opacity:.75}
+  .hp{position:absolute;left:-9999px;top:-9999px}
+
+  /* ---------- PANEL ---------- */
+  body.panel{background:var(--navy);color:var(--parchment)}
+  .panel-top{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:16px 18px;border-bottom:1px solid var(--gold-dim)}
+  .panel-top h1{font-size:1.05rem;color:var(--gold-light)}
+  .panel-top .role{font-size:.8rem;color:var(--gold);border:1px solid var(--gold-dim);
+    border-radius:999px;padding:3px 10px}
+  .panel-top button{color:var(--parchment);opacity:.7;font-size:.85rem}
+  .tabs{display:flex;gap:4px;padding:10px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tabs button{padding:9px 15px;border-radius:999px;font-weight:600;font-size:.92rem;
+    color:var(--parchment);opacity:.72;white-space:nowrap}
+  .tabs button.on{background:var(--gold);color:var(--navy);opacity:1}
+  .panel-body{padding:14px 14px 90px;max-width:1080px;margin:0 auto}
+  .pcard{background:var(--navy-2);border:1px solid rgba(201,162,39,.16);border-radius:var(--radius);
+    padding:14px 15px;margin-bottom:12px}
+  .pcard h3{font-size:1rem;color:var(--gold-light);font-family:'Alegreya Sans',sans-serif;letter-spacing:0}
+  .meta{font-size:.83rem;opacity:.65;margin-top:2px}
+  .badge{display:inline-block;font-size:.74rem;font-weight:700;padding:2px 9px;border-radius:999px;
+    background:var(--navy-3);color:var(--gold-light);border:1px solid var(--gold-dim);margin-right:5px}
+  .badge.rep{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+  .rowbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+  .btn-s{padding:8px 13px;border-radius:9px;font-weight:600;font-size:.86rem;
+    background:var(--navy-3);color:var(--parchment);border:1px solid rgba(201,162,39,.25)}
+  .btn-s.gold{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+  .btn-s.ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .btn-s:disabled{opacity:.45;cursor:default}
+  .filterbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+  .filterbar input,.filterbar select{width:auto;flex:1;min-width:130px;background:var(--navy-2);
+    color:var(--parchment);border-color:rgba(201,162,39,.3)}
+  .fchip{padding:7px 13px;border-radius:999px;font-size:.85rem;font-weight:600;
+    color:var(--parchment);border:1px solid rgba(201,162,39,.3);opacity:.75}
+  .fchip.on{background:var(--gold);color:var(--navy);opacity:1;border-color:var(--gold)}
+  .daygroup{font-family:'Cinzel',serif;font-size:.85rem;color:var(--gold);margin:20px 2px 9px;
+    letter-spacing:.08em;text-transform:uppercase}
+  .empty{text-align:center;opacity:.55;padding:44px 12px;font-style:italic}
+
+  /* login */
+  .login-box{max-width:340px;margin:14vh auto 0;text-align:center;padding:0 20px}
+  .login-box .door{width:52px;height:66px;margin:0 auto 16px;border:3px solid var(--gold);
+    border-bottom:none;border-radius:28px 28px 0 0}
+  .login-box h2{color:var(--gold-light);font-size:1.2rem;margin-bottom:20px}
+  .login-box input{text-align:center;letter-spacing:.4em;font-size:1.35rem;background:var(--navy-2);
+    color:var(--gold-light);border-color:var(--gold-dim)}
+  .login-err{color:#E88;font-size:.88rem;margin-top:10px;min-height:1.2em}
+
+  /* kanban */
+  .kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:18px;-webkit-overflow-scrolling:touch}
+  .kcol{min-width:270px;max-width:290px;flex:0 0 auto;background:rgba(255,255,255,.03);
+    border:1px solid rgba(201,162,39,.14);border-radius:var(--radius);padding:10px}
+  .kcol h4{font-family:'Cinzel',serif;font-size:.8rem;letter-spacing:.08em;color:var(--gold);
+    text-transform:uppercase;padding:4px 4px 10px;display:flex;justify-content:space-between}
+  .kcol h4 span{color:var(--parchment);opacity:.6}
+  .kcard{background:var(--navy-2);border:1px solid rgba(201,162,39,.2);border-radius:11px;
+    padding:12px;margin-bottom:9px}
+  .kcard b{color:var(--gold-light)}
+  .kmove{display:flex;justify-content:space-between;margin-top:10px;gap:6px}
+  .kmove button{flex:1;padding:7px;border-radius:8px;background:var(--navy-3);color:var(--gold-light);
+    font-weight:700;border:1px solid rgba(201,162,39,.25)}
+  .kmove button:disabled{opacity:.3}
+  .lider-line{display:flex;gap:6px;margin-top:9px}
+  .lider-line input{flex:1;padding:7px 10px;font-size:.88rem;background:var(--navy);
+    color:var(--parchment);border-color:rgba(201,162,39,.3)}
+
+  /* dashboard */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px;margin-bottom:22px}
+  .stat{background:var(--navy-2);border:1px solid rgba(201,162,39,.18);border-radius:var(--radius);
+    padding:16px 14px;text-align:center}
+  .stat .n{font-family:'Cinzel',serif;font-size:1.9rem;color:var(--gold-light);font-weight:700}
+  .stat .l{font-size:.82rem;opacity:.7;margin-top:2px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin:9px 0}
+  .bar-row .bl{width:120px;font-size:.88rem;text-align:right;opacity:.85}
+  .bar-row .bt{flex:1;height:22px;background:rgba(255,255,255,.05);border-radius:6px;overflow:hidden}
+  .bar-row .bf{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:6px;
+    min-width:2px;transition:width .5s}
+  .bar-row .bn{width:34px;font-weight:700;color:var(--gold-light)}
+
+  /* modal de edição */
+  .modal-bg{position:fixed;inset:0;background:rgba(5,10,20,.72);display:flex;align-items:center;
+    justify-content:center;z-index:60;padding:16px}
+  .modal{background:var(--navy-2);border:1px solid var(--gold-dim);border-radius:var(--radius);
+    padding:20px 18px;max-width:430px;width:100%;max-height:88vh;overflow:auto}
+  .modal h3{font-family:'Alegreya Sans',sans-serif;letter-spacing:0;font-size:1.05rem}
+  .modal label{color:var(--gold-light);font-size:.88rem}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);
+    background:var(--gold);color:var(--navy);font-weight:700;padding:12px 22px;border-radius:999px;
+    box-shadow:0 6px 20px rgba(0,0,0,.4);transition:transform .3s;z-index:99;font-size:.92rem}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* ================= CONFIGURAÇÃO ================= */
+const SUPABASE_URL = "https://ghjbljypxksubmcsvaig.supabase.co";
+const SUPABASE_KEY = "sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby";
+
+// PINs (SHA-256). Padrões: Master 1010 · Homens 2020 · Mulheres 3030 · Jovens 4040 · Adolescentes 5050 · Conselheiro 6060
+// Para trocar: gere o hash no console do navegador com  await hashPin("NOVOPIN")
+const PINS = {
+  "7a5df5ffa0dec2228d90b8d0a0f1b0767b748b0a41314c123075b8289e4e053f": "master",
+  "73a2af8864fc500fa49048bf3003776c19938f360e56bd03663866fb3087884a": "Homens",
+  "b74b7e3fcb623d805dacf98db27530f845760c47e3b0faa702b84e9ff3902c37": "Mulheres",
+  "b411746bdf09bde7f1fe70ddc8fa57241a0cb79d14d6e9c27e598635ca7dae4d": "Jovens",
+  "3f95b1b8a32c2c0251dfdbc3c8a30aab6d6e680cf0ef03e8af84a65dff0c4a85": "Adolescentes",
+  "060e33205a731400c2eb92bc12cf921a4e44cf1851d216f144337dd6ec5350a7": "conselheiro"
+};
+
+const IGREJA = "Igreja Vidas";
+const CULTOS = ["Manhã","Tarde","Noite"];
+const REDES = ["Homens","Mulheres","Jovens","Adolescentes"];
+const PEDIDOS = ["Doença","Família","Emprego","Espiritual","Outro"];
+const MOTIVOS = ["Conversão","Reconciliação","Mudança de Igreja","Oração"];
+const STATUS = ["novo","encaminhado","contatado","visitou","integrado"];
+const STATUS_LABEL = {novo:"Novo", encaminhado:"Encaminhado", contatado:"Contatado", visitou:"Visitou célula", integrado:"Integrado"};
+
+// Mensagens de WhatsApp (edite à vontade)
+function msgBoasVindas(v){
+  const nome = v.nome.split(" ")[0];
+  let m = `Olá, ${nome}! Foi uma alegria receber você na ${IGREJA}. `;
+  if((v.pedido_categorias||[]).length || v.pedido_descricao)
+    m += `Recebemos seu pedido de oração e estaremos intercedendo por você. `;
+  m += `Volte sempre — as portas estão abertas para você e sua família! 🙏`;
+  return m;
+}
+function msgLider(d){
+  return `A paz! Temos uma decisão da Rede ${d.rede} para acompanhamento:\n\n`+
+    `👤 ${d.nome}\n📱 ${fmtFone(d.whatsapp)}\n📍 ${d.endereco||"—"}\n✝️ Motivo: ${d.motivo}\n\n`+
+    `Por favor, entre em contato convidando para uma célula próxima. Deus abençoe!`;
+}
+/* ================================================ */
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = s => document.querySelector(s);
+const app = $("#app");
+let session = JSON.parse(sessionStorage.getItem("rec_sess")||"null");
+let cacheVis = [], cacheDec = [];
+
+async function hashPin(p){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(p));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+window.hashPin = hashPin;
+
+function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"), 2600); }
+function esc(s){ return (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function soDigitos(s){ return (s||"").replace(/\D/g,""); }
+function foneWa(s){ let d=soDigitos(s); if(d.length===10||d.length===11) d="55"+d; return d; }
+function fmtFone(s){ const d=soDigitos(s); return d.length>=10 ? `(${d.slice(0,2)}) ${d.slice(2,d.length-4)}-${d.slice(-4)}` : s; }
+function fmtData(iso){ return new Date(iso).toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"}); }
+function fmtDataLonga(iso){ return new Date(iso).toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}); }
+function cultoAgora(){ const h=new Date().getHours(); return h<13?"Manhã":h<17?"Tarde":"Noite"; }
+
+/* ================= ROTEADOR ================= */
+function route(){
+  const h = location.hash || "#visitante";
+  if(h.startsWith("#painel")) renderPainel();
+  else if(h==="#decisao") renderFicha("decisao");
+  else renderFicha("visitante");
+}
+window.addEventListener("hashchange", route);
+
+/* ================= FICHAS PÚBLICAS ================= */
+function renderFicha(tipo){
+  document.body.className = "public";
+  app.innerHTML = `
+    <div class="arch-hero">
+      <div class="door" aria-hidden="true"></div>
+      <h1>${IGREJA}</h1>
+      <p>${tipo==='visitante' ? 'Que bom ter você aqui. Seja bem-vindo!' : 'Registro de decisão — preenchido pelo conselheiro'}</p>
+    </div>
+    <div class="wrap">
+      <div class="ficha-switch" role="heading" aria-level="2">
+        <button class="on" style="cursor:default">
+          ${tipo==='visitante' ? 'Ficha de Visitante' : 'Ficha de Decisão · uso da equipe'}
+        </button>
+      </div>
+      <div class="card" id="fichaCard"></div>
+      ${tipo==='decisao' && session ? `
+        <div style="display:flex;justify-content:center;gap:26px;margin-top:38px">
+          <a class="foot-link" style="margin-top:0" href="#visitante">Ficha de Visitante</a>
+          ${session.role!=='conselheiro' ? `<a class="foot-link" style="margin-top:0" href="#painel">Painel</a>` : ``}
+          <a class="foot-link" style="margin-top:0" href="#" onclick="event.preventDefault();sair()">Sair</a>
+        </div>` : `
+        <a class="foot-link" href="#painel">Acesso da equipe</a>`}
+    </div>`;
+  if(tipo==="visitante") formVisitante();
+  else if(session) formDecisao();
+  else gateDecisao();
+}
+
+/* Trava da Ficha de Decisão: só a equipe (qualquer PIN válido) preenche */
+function gateDecisao(){
+  $("#fichaCard").innerHTML = `
+    <p style="color:var(--ink-soft);font-size:.97rem">Esta ficha é preenchida pelo <b>conselheiro</b> junto com a pessoa. Digite o PIN da equipe para liberar.</p>
+    <label for="g_pin">PIN da equipe</label>
+    <input id="g_pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••"
+      style="text-align:center;letter-spacing:.4em;font-size:1.3rem"
+      onkeydown="if(event.key==='Enter')entrarGate()">
+    <button class="btn-main" onclick="entrarGate()">Liberar ficha</button>
+    <div id="g_err" style="color:var(--danger);text-align:center;margin-top:12px;min-height:1.2em;font-size:.9rem"></div>`;
+  $("#g_pin").focus();
+}
+window.entrarGate = async ()=>{
+  const h = await hashPin($("#g_pin").value.trim());
+  const role = PINS[h];
+  if(!role){ $("#g_err").textContent = "PIN incorreto."; return; }
+  session = { role };
+  sessionStorage.setItem("rec_sess", JSON.stringify(session));
+  renderFicha("decisao");
+};
+
+function chipsHtml(id, items, multi){
+  return `<div class="chips" id="${id}">` + items.map(i=>
+    `<button type="button" class="chip" data-v="${i}" onclick="togChip(this,${multi})">${i}</button>`).join("") + `</div>`;
+}
+window.togChip = (el, multi)=>{
+  if(!multi) el.parentElement.querySelectorAll(".chip").forEach(c=>{ if(c!==el) c.classList.remove("on"); });
+  el.classList.toggle("on");
+};
+function chipVals(id){ return [...document.querySelectorAll(`#${id} .chip.on`)].map(c=>c.dataset.v); }
+
+function formVisitante(){
+  $("#fichaCard").innerHTML = `
+    <label for="v_nome">Nome</label>
+    <input id="v_nome" autocomplete="name" placeholder="Seu nome completo">
+    <label for="v_zap">WhatsApp</label>
+    <input id="v_zap" inputmode="tel" placeholder="(83) 90000-0000">
+    <label>Culto</label>
+    ${chipsHtml("v_culto", CULTOS, false)}
+    <label>Pedido de oração</label>
+    ${chipsHtml("v_ped", PEDIDOS, true)}
+    <label for="v_desc" style="font-weight:500;color:var(--ink-soft)">Descreva seu pedido (opcional)</label>
+    <textarea id="v_desc" placeholder="Se quiser, conte um pouco mais para orarmos por você"></textarea>
+    <input class="hp" id="v_hp" tabindex="-1" autocomplete="off">
+    <button class="btn-main" id="v_btn" onclick="enviarVisitante()">Enviar minha ficha</button>`;
+  document.querySelector(`#v_culto .chip[data-v="${cultoAgora()}"]`)?.classList.add("on");
+}
+
+window.enviarVisitante = async ()=>{
+  if($("#v_hp").value) return;
+  const nome=$("#v_nome").value.trim(), zap=soDigitos($("#v_zap").value);
+  if(!nome) return toast("Escreva seu nome");
+  if(zap.length<10) return toast("Confira o número do WhatsApp");
+  const btn=$("#v_btn"); btn.disabled=true; btn.textContent="Enviando...";
+  const { error } = await db.from("rec_visitantes").insert({
+    nome, whatsapp: zap,
+    culto: chipVals("v_culto")[0] || cultoAgora(),
+    pedido_categorias: chipVals("v_ped"),
+    pedido_descricao: $("#v_desc").value.trim() || null
+  });
+  if(error){ btn.disabled=false; btn.textContent="Enviar minha ficha"; return toast("Não foi possível enviar. Tente de novo."); }
+  telaSucesso("Ficha recebida!", "Obrigado pela sua visita. Em breve você receberá uma mensagem nossa no WhatsApp. Volte sempre!");
+};
+
+function formDecisao(){
+  $("#fichaCard").innerHTML = `
+    <label for="d_nome">Nome</label>
+    <input id="d_nome" autocomplete="name" placeholder="Nome completo">
+    <label for="d_zap">WhatsApp</label>
+    <input id="d_zap" inputmode="tel" placeholder="(83) 90000-0000">
+    <label for="d_end">Endereço</label>
+    <input id="d_end" placeholder="Rua, número e bairro">
+    <label>Motivo da decisão</label>
+    ${chipsHtml("d_mot", MOTIVOS, false)}
+    <label>Rede de acompanhamento</label>
+    ${chipsHtml("d_rede", REDES, false)}
+    <input class="hp" id="d_hp" tabindex="-1" autocomplete="off">
+    <button class="btn-main" id="d_btn" onclick="enviarDecisao()">Enviar ficha de decisão</button>`;
+}
+
+window.enviarDecisao = async ()=>{
+  if($("#d_hp").value) return;
+  const nome=$("#d_nome").value.trim(), zap=soDigitos($("#d_zap").value);
+  const motivo=chipVals("d_mot")[0], rede=chipVals("d_rede")[0];
+  if(!nome) return toast("Escreva o nome");
+  if(zap.length<10) return toast("Confira o WhatsApp");
+  if(!motivo) return toast("Marque o motivo da decisão");
+  if(!rede) return toast("Marque a Rede de acompanhamento");
+  const btn=$("#d_btn"); btn.disabled=true; btn.textContent="Enviando...";
+  const { error } = await db.from("rec_decisoes").insert({
+    nome, whatsapp: zap, endereco: $("#d_end").value.trim() || null, motivo, rede
+  });
+  if(error){ btn.disabled=false; btn.textContent="Enviar ficha de decisão"; return toast("Não foi possível enviar. Tente de novo."); }
+  telaSucesso("Decisão registrada! 🙌", "Que alegria! O céu está em festa. Em breve um líder da igreja entrará em contato com você.");
+};
+
+function telaSucesso(t, p){
+  $("#fichaCard").innerHTML = `
+    <div class="success">
+      <div class="door" aria-hidden="true"></div>
+      <h2>${t}</h2><p>${p}</p>
+      <button class="btn-main" onclick="route()" style="max-width:280px;margin:0 auto">Nova ficha</button>
+    </div>`;
+}
+
+/* ================= PAINEL ================= */
+function renderPainel(){
+  document.body.className = "panel";
+  if(!session) return renderLogin();
+  if(session.role === "conselheiro"){ location.hash = "#decisao"; return; }
+  const isMaster = session.role === "master";
+  const tabs = isMaster ? ["Visitantes","Oração","Decisões","Resumo"] : ["Decisões"];
+  const cur = sessionStorage.getItem("rec_tab") || tabs[0];
+  app.innerHTML = `
+    <div class="panel-top">
+      <h1>RECEBER · Painel</h1>
+      <div><span class="role">${isMaster?"Bispo":"Rede "+session.role}</span>
+      <button onclick="sair()">Sair</button></div>
+    </div>
+    <div class="tabs">${tabs.map(t=>`<button class="${t===cur?'on':''}" onclick="setTab('${t}')">${t}</button>`).join("")}</div>
+    <div class="panel-body" id="pbody"><div class="empty">Carregando…</div></div>`;
+  loadData().then(()=>drawTab(cur));
+}
+window.setTab = t=>{ sessionStorage.setItem("rec_tab",t); renderPainel(); };
+window.sair = ()=>{ session=null; sessionStorage.clear(); location.hash="#visitante"; };
+
+function renderLogin(){
+  app.innerHTML = `
+    <div class="login-box">
+      <div class="door" aria-hidden="true"></div>
+      <h2>Acesso da equipe</h2>
+      <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••" autofocus
+        onkeydown="if(event.key==='Enter')entrar()">
+      <button class="btn-main" style="margin-top:16px" onclick="entrar()">Entrar</button>
+      <div class="login-err" id="perr"></div>
+    </div>`;
+}
+window.entrar = async ()=>{
+  const h = await hashPin($("#pin").value.trim());
+  const role = PINS[h];
+  if(!role){ $("#perr").textContent="PIN incorreto."; return; }
+  session = { role };
+  sessionStorage.setItem("rec_sess", JSON.stringify(session));
+  renderPainel();
+};
+
+async function loadData(){
+  const [v, d] = await Promise.all([
+    db.from("rec_visitantes").select("*").order("criado_em",{ascending:false}).limit(500),
+    db.from("rec_decisoes").select("*").order("criado_em",{ascending:false}).limit(500)
+  ]);
+  cacheVis = v.data || []; cacheDec = d.data || [];
+  if(v.error||d.error) toast("Erro ao carregar dados");
+}
+
+function drawTab(t){
+  if(t==="Visitantes") drawVisitantes();
+  else if(t==="Oração") drawOracao();
+  else if(t==="Decisões") drawKanban();
+  else drawResumo();
+}
+
+/* ---- Visitantes ---- */
+let fVisCulto = "", fVisBusca = "";
+function drawVisitantes(){
+  const b = $("#pbody");
+  const visitas = {};
+  cacheVis.forEach(v=>{ const k=soDigitos(v.whatsapp); visitas[k]=(visitas[k]||0)+1; });
+  let lista = cacheVis.filter(v =>
+    (!fVisCulto || v.culto===fVisCulto) &&
+    (!fVisBusca || v.nome.toLowerCase().includes(fVisBusca) || soDigitos(v.whatsapp).includes(soDigitos(fVisBusca)))
+  );
+  let html = `<div class="filterbar">
+    <input placeholder="Buscar nome ou telefone" value="${esc(fVisBusca)}"
+      oninput="fVisBusca=this.value.toLowerCase();refreshVis()">
+    <select onchange="fVisCulto=this.value;refreshVis()">
+      <option value="">Todos os cultos</option>
+      ${CULTOS.map(c=>`<option ${c===fVisCulto?'selected':''}>${c}</option>`).join("")}
+    </select></div><div id="vislist">`;
+  html += visHtml(lista, visitas) + `</div>`;
+  b.innerHTML = html;
+}
+window.refreshVis = ()=>{ 
+  const visitas={}; cacheVis.forEach(v=>{const k=soDigitos(v.whatsapp);visitas[k]=(visitas[k]||0)+1;});
+  const lista = cacheVis.filter(v =>
+    (!fVisCulto || v.culto===fVisCulto) &&
+    (!fVisBusca || v.nome.toLowerCase().includes(fVisBusca) || soDigitos(v.whatsapp).includes(soDigitos(fVisBusca))));
+  $("#vislist").innerHTML = visHtml(lista, visitas);
+};
+function visHtml(lista, visitas){
+  if(!lista.length) return `<div class="empty">Nenhum visitante encontrado.</div>`;
+  let html="", dia="";
+  lista.forEach(v=>{
+    const d = fmtDataLonga(v.criado_em);
+    if(d!==dia){ dia=d; html+=`<div class="daygroup">${d}</div>`; }
+    const rep = visitas[soDigitos(v.whatsapp)] > 1;
+    const pedido = (v.pedido_categorias||[]).length || v.pedido_descricao;
+    html += `<div class="pcard">
+      <h3>${esc(v.nome)}</h3>
+      <div class="meta">${fmtFone(v.whatsapp)} · Culto da ${v.culto||"?"}</div>
+      <div style="margin-top:7px">
+        ${rep?`<span class="badge rep">Visitante recorrente</span>`:""}
+        ${(v.pedido_categorias||[]).map(p=>`<span class="badge">${p}</span>`).join("")}
+      </div>
+      ${v.pedido_descricao?`<div style="margin-top:7px;font-size:.92rem;opacity:.85">“${esc(v.pedido_descricao)}”</div>`:""}
+      <div class="rowbtns">
+        <button class="btn-s ${v.boas_vindas?'':'gold'}" onclick="boasVindas('${v.id}')">
+          ${v.boas_vindas?"✓ Boas-vindas enviada":"Enviar boas-vindas"}</button>
+        <button class="btn-s" onclick="editarVis('${v.id}')">✏️ Editar</button>
+        <button class="btn-s" onclick="excluir('rec_visitantes','${v.id}')">🗑 Excluir</button>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+window.boasVindas = async id=>{
+  const v = cacheVis.find(x=>x.id===id); if(!v) return;
+  window.open(`https://wa.me/${foneWa(v.whatsapp)}?text=${encodeURIComponent(msgBoasVindas(v))}`,"_blank");
+  if(!v.boas_vindas){
+    v.boas_vindas = true;
+    await db.from("rec_visitantes").update({boas_vindas:true}).eq("id",id);
+    refreshVis();
+  }
+};
+
+/* ---- Oração ---- */
+let fPed = "";
+function drawOracao(){
+  const lista = cacheVis.filter(v => (v.pedido_categorias||[]).length || v.pedido_descricao);
+  const filtrada = fPed ? lista.filter(v=>(v.pedido_categorias||[]).includes(fPed)) : lista;
+  let html = `<div class="filterbar">
+    <button class="fchip ${!fPed?'on':''}" onclick="fPed='';drawTab('Oração')">Todos</button>
+    ${PEDIDOS.map(p=>`<button class="fchip ${fPed===p?'on':''}" onclick="fPed='${p}';drawTab('Oração')">${p}</button>`).join("")}
+  </div>`;
+  if(!filtrada.length) html += `<div class="empty">Nenhum pedido nesta categoria.</div>`;
+  filtrada.forEach(v=>{
+    html += `<div class="pcard">
+      <h3>${esc(v.nome)}</h3>
+      <div class="meta">${fmtData(v.criado_em)} · ${fmtFone(v.whatsapp)}</div>
+      <div style="margin-top:7px">${(v.pedido_categorias||[]).map(p=>`<span class="badge">${p}</span>`).join("")}</div>
+      ${v.pedido_descricao?`<div style="margin-top:8px;font-size:.95rem">“${esc(v.pedido_descricao)}”</div>`:""}
+    </div>`;
+  });
+  $("#pbody").innerHTML = html;
+}
+
+/* ---- Decisões (Kanban) ---- */
+let fRede = "";
+function drawKanban(){
+  const isMaster = session.role==="master";
+  if(!isMaster) fRede = session.role;
+  const lista = cacheDec.filter(d => !fRede || d.rede===fRede);
+  let html = "";
+  if(isMaster){
+    html += `<div class="filterbar">
+      <button class="fchip ${!fRede?'on':''}" onclick="fRede='';drawTab('Decisões')">Todas as Redes</button>
+      ${REDES.map(r=>`<button class="fchip ${fRede===r?'on':''}" onclick="fRede='${r}';drawTab('Decisões')">${r}</button>`).join("")}
+      <button class="btn-s gold" onclick="window.open('#decisao','_blank')">+ Nova ficha de decisão</button>
+    </div>`;
+  }
+  html += `<div class="kanban">`;
+  STATUS.forEach(st=>{
+    const cards = lista.filter(d=>d.status===st);
+    html += `<div class="kcol"><h4>${STATUS_LABEL[st]} <span>${cards.length}</span></h4>`;
+    if(!cards.length) html += `<div class="empty" style="padding:18px 6px;font-size:.85rem">—</div>`;
+    cards.forEach(d=>{
+      const i = STATUS.indexOf(st);
+      html += `<div class="kcard">
+        <b>${esc(d.nome)}</b>
+        <div class="meta">${fmtData(d.criado_em)} · ${fmtFone(d.whatsapp)}</div>
+        <div style="margin-top:6px">
+          <span class="badge">${d.rede}</span><span class="badge">${d.motivo}</span>
+        </div>
+        ${d.endereco?`<div class="meta" style="margin-top:5px">📍 ${esc(d.endereco)}</div>`:""}
+        <div class="lider-line">
+          <input placeholder="Líder responsável" value="${esc(d.lider||"")}"
+            onchange="setLider('${d.id}',this.value)">
+        </div>
+        <div class="rowbtns">
+          <button class="btn-s gold" onclick="encaminhar('${d.id}')">Encaminhar líder</button>
+          <button class="btn-s" onclick="zapDireto('${d.id}')">WhatsApp</button>
+          ${isMaster?`<button class="btn-s" onclick="editarDec('${d.id}')">✏️</button>
+          <button class="btn-s" onclick="excluir('rec_decisoes','${d.id}')">🗑</button>`:""}
+        </div>
+        <div class="kmove">
+          <button ${i===0?"disabled":""} onclick="mover('${d.id}',-1)" aria-label="Voltar etapa">◀</button>
+          <button ${i===STATUS.length-1?"disabled":""} onclick="mover('${d.id}',1)" aria-label="Avançar etapa">▶</button>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  html += `</div>`;
+  $("#pbody").innerHTML = html;
+}
+/* ---- Editar / Excluir ---- */
+function abrirModal(html){
+  const bg = document.createElement("div");
+  bg.className = "modal-bg"; bg.id = "modalBg";
+  bg.innerHTML = `<div class="modal">${html}</div>`;
+  bg.addEventListener("click", e=>{ if(e.target===bg) fecharModal(); });
+  document.body.appendChild(bg);
+}
+window.fecharModal = ()=>{ $("#modalBg")?.remove(); };
+
+function selHtml(id, items, val){
+  return `<select id="${id}">${items.map(i=>`<option ${i===val?'selected':''}>${i}</option>`).join("")}</select>`;
+}
+
+window.editarVis = id=>{
+  const v = cacheVis.find(x=>x.id===id); if(!v) return;
+  abrirModal(`
+    <h3 style="color:var(--gold-light)">Editar visitante</h3>
+    <label>Nome</label><input id="e_nome" value="${esc(v.nome)}">
+    <label>WhatsApp</label><input id="e_zap" inputmode="tel" value="${esc(v.whatsapp)}">
+    <label>Culto</label>${selHtml("e_culto", CULTOS, v.culto)}
+    <label>Descrição do pedido</label><textarea id="e_desc">${esc(v.pedido_descricao||"")}</textarea>
+    <div class="rowbtns" style="margin-top:16px">
+      <button class="btn-s gold" onclick="salvarVis('${id}')">Salvar</button>
+      <button class="btn-s" onclick="fecharModal()">Cancelar</button>
+    </div>`);
+};
+window.salvarVis = async id=>{
+  const v = cacheVis.find(x=>x.id===id); if(!v) return;
+  const dados = {
+    nome: $("#e_nome").value.trim(),
+    whatsapp: soDigitos($("#e_zap").value),
+    culto: $("#e_culto").value,
+    pedido_descricao: $("#e_desc").value.trim() || null
+  };
+  if(!dados.nome) return toast("Nome não pode ficar vazio");
+  if(dados.whatsapp.length<10) return toast("Confira o WhatsApp");
+  const { error } = await db.from("rec_visitantes").update(dados).eq("id",id);
+  if(error) return toast("Erro ao salvar");
+  Object.assign(v, dados);
+  fecharModal(); refreshVis(); toast("Ficha atualizada");
+};
+
+window.editarDec = id=>{
+  const d = cacheDec.find(x=>x.id===id); if(!d) return;
+  abrirModal(`
+    <h3 style="color:var(--gold-light)">Editar decisão</h3>
+    <label>Nome</label><input id="e_nome" value="${esc(d.nome)}">
+    <label>WhatsApp</label><input id="e_zap" inputmode="tel" value="${esc(d.whatsapp)}">
+    <label>Endereço</label><input id="e_end" value="${esc(d.endereco||"")}">
+    <label>Motivo</label>${selHtml("e_mot", MOTIVOS, d.motivo)}
+    <label>Rede</label>${selHtml("e_rede", REDES, d.rede)}
+    <label>Líder responsável</label><input id="e_lider" value="${esc(d.lider||"")}">
+    <div class="rowbtns" style="margin-top:16px">
+      <button class="btn-s gold" onclick="salvarDec('${id}')">Salvar</button>
+      <button class="btn-s" onclick="fecharModal()">Cancelar</button>
+    </div>`);
+};
+window.salvarDec = async id=>{
+  const d = cacheDec.find(x=>x.id===id); if(!d) return;
+  const dados = {
+    nome: $("#e_nome").value.trim(),
+    whatsapp: soDigitos($("#e_zap").value),
+    endereco: $("#e_end").value.trim() || null,
+    motivo: $("#e_mot").value,
+    rede: $("#e_rede").value,
+    lider: $("#e_lider").value.trim() || null
+  };
+  if(!dados.nome) return toast("Nome não pode ficar vazio");
+  if(dados.whatsapp.length<10) return toast("Confira o WhatsApp");
+  const { error } = await db.from("rec_decisoes").update(dados).eq("id",id);
+  if(error) return toast("Erro ao salvar");
+  Object.assign(d, dados);
+  fecharModal(); drawKanban(); toast("Ficha atualizada");
+};
+
+window.excluir = async (tabela, id)=>{
+  if(!confirm("Excluir esta ficha? Essa ação não pode ser desfeita.")) return;
+  const { error } = await db.from(tabela).delete().eq("id",id);
+  if(error) return toast("Erro ao excluir — rode o SQL de atualização");
+  if(tabela==="rec_visitantes"){ cacheVis = cacheVis.filter(x=>x.id!==id); refreshVis(); }
+  else { cacheDec = cacheDec.filter(x=>x.id!==id); drawKanban(); }
+  toast("Ficha excluída");
+};
+
+window.mover = async (id, dir)=>{
+  const d = cacheDec.find(x=>x.id===id); if(!d) return;
+  const i = STATUS.indexOf(d.status) + dir;
+  if(i<0 || i>=STATUS.length) return;
+  d.status = STATUS[i];
+  drawKanban();
+  const { error } = await db.from("rec_decisoes").update({status:d.status}).eq("id",id);
+  if(error) toast("Erro ao salvar");
+};
+window.setLider = async (id, v)=>{
+  const d = cacheDec.find(x=>x.id===id); if(!d) return;
+  d.lider = v.trim();
+  await db.from("rec_decisoes").update({lider:d.lider||null}).eq("id",id);
+  toast("Líder atualizado");
+};
+window.encaminhar = id=>{
+  const d = cacheDec.find(x=>x.id===id); if(!d) return;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msgLider(d))}`,"_blank");
+};
+window.zapDireto = id=>{
+  const d = cacheDec.find(x=>x.id===id); if(!d) return;
+  window.open(`https://wa.me/${foneWa(d.whatsapp)}`,"_blank");
+};
+
+/* ---- Resumo ---- */
+function drawResumo(){
+  const agora = new Date(), mes = agora.getMonth(), ano = agora.getFullYear();
+  const noMes = a => a.filter(x=>{ const d=new Date(x.criado_em); return d.getMonth()===mes && d.getFullYear()===ano; });
+  const visMes = noMes(cacheVis).length, decMes = noMes(cacheDec).length;
+  const porRede = REDES.map(r=>({r, n: cacheDec.filter(d=>d.rede===r).length}));
+  const maxRede = Math.max(1, ...porRede.map(x=>x.n));
+  const funil = STATUS.map(s=>({s, n: cacheDec.filter(d=>d.status===s).length}));
+  const maxFunil = Math.max(1, ...funil.map(x=>x.n));
+  $("#pbody").innerHTML = `
+    <div class="stat-grid">
+      <div class="stat"><div class="n">${visMes}</div><div class="l">Visitantes no mês</div></div>
+      <div class="stat"><div class="n">${cacheVis.length}</div><div class="l">Visitantes (total)</div></div>
+      <div class="stat"><div class="n">${decMes}</div><div class="l">Decisões no mês</div></div>
+      <div class="stat"><div class="n">${cacheDec.length}</div><div class="l">Decisões (total)</div></div>
+    </div>
+    <div class="pcard"><h3 style="margin-bottom:8px">Decisões por Rede</h3>
+      ${porRede.map(x=>`<div class="bar-row"><div class="bl">${x.r}</div>
+        <div class="bt"><div class="bf" style="width:${x.n/maxRede*100}%"></div></div>
+        <div class="bn">${x.n}</div></div>`).join("")}
+    </div>
+    <div class="pcard"><h3 style="margin-bottom:8px">Funil de integração</h3>
+      ${funil.map(x=>`<div class="bar-row"><div class="bl">${STATUS_LABEL[x.s]}</div>
+        <div class="bt"><div class="bf" style="width:${x.n/maxFunil*100}%"></div></div>
+        <div class="bn">${x.n}</div></div>`).join("")}
+    </div>`;
+}
+
+/* ================= INIT ================= */
+route();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
