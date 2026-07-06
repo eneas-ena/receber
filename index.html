@@ -45,6 +45,8 @@
   .arch-hero .door::after{content:"";position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);
     width:9px;height:9px;border-radius:50%;background:var(--gold-light)}
   .arch-hero h1{font-size:1.5rem;color:var(--gold-light)}
+  .arch-hero .hero-logo{width:96px;height:96px;margin:0 auto 12px;display:block;border-radius:20px;
+    box-shadow:0 4px 16px rgba(0,0,0,.35)}
   .arch-hero p{opacity:.85;font-size:.98rem;margin-top:4px}
   .wrap{max-width:520px;margin:0 auto;padding:0 18px 90px}
   .ficha-switch{display:flex;gap:8px;margin:-26px 0 22px;position:relative;z-index:2}
@@ -245,7 +247,7 @@ function renderFicha(tipo){
   document.body.className = "public";
   app.innerHTML = `
     <div class="arch-hero">
-      <div class="door" aria-hidden="true"></div>
+      <img class="hero-logo" src="icon-512.png" alt="RECEBER — Igreja Vidas">
       <h1>${IGREJA}</h1>
       <p>${tipo==='visitante' ? 'Que bom ter você aqui. Seja bem-vindo!' : 'Registro de decisão — preenchido pelo conselheiro'}</p>
     </div>
@@ -368,7 +370,7 @@ window.enviarDecisao = async ()=>{
 function telaSucesso(t, p){
   $("#fichaCard").innerHTML = `
     <div class="success">
-      <div class="door" aria-hidden="true"></div>
+      <img src="icon-512.png" alt="" style="width:88px;height:88px;border-radius:18px;margin:0 auto 18px;display:block;box-shadow:0 4px 14px rgba(0,0,0,.2)">
       <h2>${t}</h2><p>${p}</p>
       <button class="btn-main" onclick="route()" style="max-width:280px;margin:0 auto">Nova ficha</button>
     </div>`;
