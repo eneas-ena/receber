@@ -1,4 +1,4 @@
-const CACHE = "receber-v4";
+const CACHE = "receber-v5";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -10,7 +10,12 @@ self.addEventListener("activate", e => {
 });
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
-  // Rede primeiro (dados sempre frescos), cache como reserva
+  const url = new URL(e.request.url);
+  // Só guarda os arquivos do próprio app. Os dados do Supabase (visitantes,
+  // decisões) nunca ficam gravados no aparelho.
+  if (url.origin !== self.location.origin) return;
+  // A checagem de versão precisa sempre do arquivo novo.
+  if (url.searchParams.has("nocache")) return;
   e.respondWith(
     fetch(e.request).then(r => {
       const copy = r.clone();

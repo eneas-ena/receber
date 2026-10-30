@@ -163,6 +163,49 @@
     background:var(--gold);color:var(--navy);font-weight:700;padding:12px 22px;border-radius:999px;
     box-shadow:0 6px 20px rgba(0,0,0,.4);transition:transform .3s;z-index:99;font-size:.92rem}
   .toast.show{transform:translateX(-50%) translateY(0)}
+  .modal{color:var(--parchment)}
+
+  /* versão, tema e atualização */
+  .ver-rodape{text-align:center;margin-top:18px;font-size:.8rem;color:var(--ink-soft);opacity:.75}
+  .ver-rodape a{color:inherit}
+  body.panel .ver-rodape{color:var(--parchment)}
+  .panel-top .ver{font-family:'Alegreya Sans',sans-serif;font-size:.72rem;opacity:.6;letter-spacing:0;margin-left:4px}
+  .top-acoes{display:flex;align-items:center;gap:10px}
+  .tema-btn{font-size:1.05rem;line-height:1;padding:6px;border-radius:999px;opacity:1!important}
+  .tema-fixo{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:50;
+    background:rgba(14,26,47,.55);width:38px;height:38px;display:flex;align-items:center;justify-content:center}
+  .aviso-versao{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);z-index:98;
+    max-width:460px;margin:0 auto;background:#0E1A2F;color:#F6F1E4;border:1px solid #C9A227;border-radius:14px;
+    padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.92rem;
+    box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .aviso-versao button{background:#C9A227;color:#0E1A2F;font-weight:700;border-radius:9px;padding:8px 12px;white-space:nowrap}
+
+  /* fichas no modo escuro */
+  html[data-theme=dark] body.public{background:#0A1424;color:#F6F1E4;
+    --ink:#F6F1E4; --ink-soft:#B9C2D6; --parchment-2:#16263F}
+  html[data-theme=dark] body.public .card,
+  html[data-theme=dark] body.public .chip,
+  html[data-theme=dark] body.public .ficha-switch button,
+  html[data-theme=dark] body.public input,
+  html[data-theme=dark] body.public textarea{border-color:rgba(231,206,126,.28)}
+  html[data-theme=dark] body.public .chip.on,
+  html[data-theme=dark] body.public .ficha-switch button.on{background:var(--gold);color:#0E1A2F;border-color:var(--gold)}
+
+  /* painel no modo claro */
+  html[data-theme=light] body.panel{
+    --navy:#F6F1E4; --navy-2:#FFFDF6; --navy-3:#EFE7D2; --parchment:#1B2438;
+    --gold-light:#8A6A10; --gold-dim:rgba(138,106,16,.3)}
+  html[data-theme=light] body.panel .tabs button.on,
+  html[data-theme=light] body.panel .fchip.on,
+  html[data-theme=light] body.panel .btn-s.gold,
+  html[data-theme=light] body.panel .btn-main,
+  html[data-theme=light] body.panel .badge.rep,
+  html[data-theme=light] body.panel .toast{color:#0E1A2F}
+  html[data-theme=light] body.panel .kcol{background:rgba(0,0,0,.03)}
+  html[data-theme=light] body.panel .bar-row .bt{background:rgba(0,0,0,.07)}
+  html[data-theme=light] body.panel .login-err{color:var(--danger)}
+  html[data-theme=light] .tema-fixo{background:rgba(255,253,246,.85);box-shadow:0 1px 6px rgba(0,0,0,.15)}
+
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -176,16 +219,12 @@
 const SUPABASE_URL = "https://ghjbljypxksubmcsvaig.supabase.co";
 const SUPABASE_KEY = "sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby";
 
-// PINs (SHA-256). Padrões: Master 1010 · Homens 2020 · Mulheres 3030 · Jovens 4040 · Adolescentes 5050 · Conselheiro 6060
-// Para trocar: gere o hash no console do navegador com  await hashPin("NOVOPIN")
-const PINS = {
-  "7a5df5ffa0dec2228d90b8d0a0f1b0767b748b0a41314c123075b8289e4e053f": "master",
-  "73a2af8864fc500fa49048bf3003776c19938f360e56bd03663866fb3087884a": "Homens",
-  "b74b7e3fcb623d805dacf98db27530f845760c47e3b0faa702b84e9ff3902c37": "Mulheres",
-  "b411746bdf09bde7f1fe70ddc8fa57241a0cb79d14d6e9c27e598635ca7dae4d": "Jovens",
-  "3f95b1b8a32c2c0251dfdbc3c8a30aab6d6e680cf0ef03e8af84a65dff0c4a85": "Adolescentes",
-  "060e33205a731400c2eb92bc12cf921a4e44cf1851d216f144337dd6ec5350a7": "conselheiro"
-};
+const VERSAO = "2.0.0";
+
+// Acesso: as senhas NÃO ficam aqui. Elas ficam no Supabase (Authentication → Users).
+// Estes são só os nomes de usuário; sem a senha, o banco recusa tudo.
+const USUARIO_TOTAL = "receber-total@igrejavidas.app";   // painel completo
+const USUARIO_FICHA = "receber-ficha@igrejavidas.app";   // só envia fichas de decisão
 
 const IGREJA = "Igreja Vidas";
 const CULTOS = ["Manhã","Tarde","Noite"];
@@ -211,17 +250,38 @@ function msgLider(d){
 }
 /* ================================================ */
 
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// storageKey próprio: os outros apps do mesmo endereço usam o mesmo Supabase
+// e não podem trocar o login do RECEBER (nem o RECEBER o deles).
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { storageKey: "receber-auth", persistSession: true, autoRefreshToken: true }
+});
 const $ = s => document.querySelector(s);
 const app = $("#app");
-let session = JSON.parse(sessionStorage.getItem("rec_sess")||"null");
+let session = null;          // { role: "total" | "ficha" }
 let cacheVis = [], cacheDec = [];
 
-async function hashPin(p){
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(p));
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+function papelDoUsuario(user){
+  const e = (user?.email||"").toLowerCase();
+  if(e === USUARIO_TOTAL) return "total";
+  if(e === USUARIO_FICHA) return "ficha";
+  return null;
 }
-window.hashPin = hashPin;
+async function carregarSessao(){
+  try{
+    const { data } = await db.auth.getSession();
+    const role = papelDoUsuario(data?.session?.user);
+    session = role ? { role } : null;
+  }catch(e){ session = null; }
+}
+// Tenta a senha como "total"; se não for, tenta como "ficha".
+async function entrarComSenha(senha){
+  if(!senha) return null;
+  for(const email of [USUARIO_TOTAL, USUARIO_FICHA]){
+    const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
+    if(!error && data?.user){ const role = papelDoUsuario(data.user); session = { role }; return role; }
+  }
+  return null;
+}
 
 function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("show");
   setTimeout(()=>el.classList.remove("show"), 2600); }
@@ -261,34 +321,34 @@ function renderFicha(tipo){
       ${tipo==='decisao' && session ? `
         <div style="display:flex;justify-content:center;gap:26px;margin-top:38px">
           <a class="foot-link" style="margin-top:0" href="#visitante">Ficha de Visitante</a>
-          ${session.role!=='conselheiro' ? `<a class="foot-link" style="margin-top:0" href="#painel">Painel</a>` : ``}
+          ${session.role==='total' ? `<a class="foot-link" style="margin-top:0" href="#painel">Painel</a>` : ``}
           <a class="foot-link" style="margin-top:0" href="#" onclick="event.preventDefault();sair()">Sair</a>
         </div>` : `
         <a class="foot-link" href="#painel">Acesso da equipe</a>`}
-    </div>`;
+      ${rodapeHtml()}
+    </div>
+    ${temaBtnHtml("fixo")}`;
   if(tipo==="visitante") formVisitante();
   else if(session) formDecisao();
   else gateDecisao();
 }
 
-/* Trava da Ficha de Decisão: só a equipe (qualquer PIN válido) preenche */
+/* Trava da Ficha de Decisão: só a equipe (senha da ficha ou senha total) preenche */
 function gateDecisao(){
   $("#fichaCard").innerHTML = `
-    <p style="color:var(--ink-soft);font-size:.97rem">Esta ficha é preenchida pelo <b>conselheiro</b> junto com a pessoa. Digite o PIN da equipe para liberar.</p>
-    <label for="g_pin">PIN da equipe</label>
-    <input id="g_pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••"
-      style="text-align:center;letter-spacing:.4em;font-size:1.3rem"
+    <p style="color:var(--ink-soft);font-size:.97rem">Esta ficha é preenchida pelo <b>conselheiro</b> junto com a pessoa. Digite a senha da equipe para liberar.</p>
+    <label for="g_pin">Senha da equipe</label>
+    <input id="g_pin" type="password" autocomplete="current-password" placeholder="Senha"
       onkeydown="if(event.key==='Enter')entrarGate()">
-    <button class="btn-main" onclick="entrarGate()">Liberar ficha</button>
+    <button class="btn-main" id="g_btn" onclick="entrarGate()">Liberar ficha</button>
     <div id="g_err" style="color:var(--danger);text-align:center;margin-top:12px;min-height:1.2em;font-size:.9rem"></div>`;
   $("#g_pin").focus();
 }
 window.entrarGate = async ()=>{
-  const h = await hashPin($("#g_pin").value.trim());
-  const role = PINS[h];
-  if(!role){ $("#g_err").textContent = "PIN incorreto."; return; }
-  session = { role };
-  sessionStorage.setItem("rec_sess", JSON.stringify(session));
+  const btn=$("#g_btn"); btn.disabled=true; btn.textContent="Conferindo...";
+  const role = await entrarComSenha($("#g_pin").value);
+  btn.disabled=false; btn.textContent="Liberar ficha";
+  if(!role){ $("#g_err").textContent = "Senha incorreta."; return; }
   renderFicha("decisao");
 };
 
@@ -359,11 +419,35 @@ window.enviarDecisao = async ()=>{
   if(zap.length<10) return toast("Confira o WhatsApp");
   if(!motivo) return toast("Marque o motivo da decisão");
   if(!rede) return toast("Marque a Rede de acompanhamento");
-  const btn=$("#d_btn"); btn.disabled=true; btn.textContent="Enviando...";
-  const { error } = await db.from("rec_decisoes").insert({
-    nome, whatsapp: zap, endereco: $("#d_end").value.trim() || null, motivo, rede
-  });
-  if(error){ btn.disabled=false; btn.textContent="Enviar ficha de decisão"; return toast("Não foi possível enviar. Tente de novo."); }
+  const endereco = $("#d_end").value.trim() || null;
+  fichaPendente = { nome, whatsapp: zap, endereco, motivo, rede, status: "novo" };
+  const linha = (r, v) => `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--gold-dim)">
+      <span style="min-width:92px;color:var(--gold-light);font-size:.88rem">${r}</span><span>${esc(v)}</span></div>`;
+  abrirModal(`
+    <h3 style="color:var(--gold-light)">Revise antes de salvar</h3>
+    <p style="opacity:.8;font-size:.92rem;margin:6px 0 10px">Confira com a pessoa se está tudo certo. Depois de salva, a ficha só pode ser corrigida pelo Bispo.</p>
+    ${linha("Nome", nome)}
+    ${linha("WhatsApp", fmtFone(zap))}
+    ${linha("Endereço", endereco || "—")}
+    ${linha("Motivo", motivo)}
+    ${linha("Rede", rede)}
+    <div class="rowbtns" style="margin-top:18px">
+      <button class="btn-s gold" id="d_conf" onclick="confirmarDecisao()">✓ Está certo, salvar</button>
+      <button class="btn-s" onclick="fecharModal()">Corrigir</button>
+    </div>`);
+};
+let fichaPendente = null;
+window.confirmarDecisao = async ()=>{
+  if(!fichaPendente) return;
+  const b=$("#d_conf"); b.disabled=true; b.textContent="Salvando...";
+  const { error } = await db.from("rec_decisoes").insert(fichaPendente);
+  if(error){
+    b.disabled=false; b.textContent="✓ Está certo, salvar";
+    if(error.code==="42501" || /row-level|permission/i.test(error.message||""))
+      return toast("Sem permissão. Saia e entre de novo com a senha.");
+    return toast("Não foi possível salvar. Tente de novo.");
+  }
+  fichaPendente = null; fecharModal();
   telaSucesso("Decisão registrada! 🙌", "Que alegria! O céu está em festa. Em breve um líder da igreja entrará em contato com você.");
 };
 
@@ -380,14 +464,15 @@ function telaSucesso(t, p){
 function renderPainel(){
   document.body.className = "panel";
   if(!session) return renderLogin();
-  if(session.role === "conselheiro"){ location.hash = "#decisao"; return; }
-  const isMaster = session.role === "master";
-  const tabs = isMaster ? ["Visitantes","Oração","Decisões","Resumo"] : ["Decisões"];
+  if(session.role !== "total"){ location.hash = "#decisao"; return; }
+  const tabs = ["Visitantes","Oração","Decisões","Resumo"];
   const cur = sessionStorage.getItem("rec_tab") || tabs[0];
   app.innerHTML = `
     <div class="panel-top">
-      <h1>RECEBER · Painel</h1>
-      <div><span class="role">${isMaster?"Bispo":"Rede "+session.role}</span>
+      <h1>RECEBER · Painel <span class="ver">v${VERSAO}</span></h1>
+      <div class="top-acoes"><span class="role">Bispo</span>
+      ${temaBtnHtml()}
+      <button onclick="atualizarApp()" title="Atualizar app" aria-label="Atualizar app">⟳</button>
       <button onclick="sair()">Sair</button></div>
     </div>
     <div class="tabs">${tabs.map(t=>`<button class="${t===cur?'on':''}" onclick="setTab('${t}')">${t}</button>`).join("")}</div>
@@ -395,25 +480,31 @@ function renderPainel(){
   loadData().then(()=>drawTab(cur));
 }
 window.setTab = t=>{ sessionStorage.setItem("rec_tab",t); renderPainel(); };
-window.sair = ()=>{ session=null; sessionStorage.clear(); location.hash="#visitante"; };
+window.sair = async ()=>{
+  try{ await db.auth.signOut(); }catch(e){}
+  session=null; sessionStorage.clear(); location.hash="#visitante"; route();
+};
 
 function renderLogin(){
   app.innerHTML = `
     <div class="login-box">
       <div class="door" aria-hidden="true"></div>
       <h2>Acesso da equipe</h2>
-      <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••" autofocus
+      <input id="pin" type="password" autocomplete="current-password" placeholder="Senha" autofocus
         onkeydown="if(event.key==='Enter')entrar()">
-      <button class="btn-main" style="margin-top:16px" onclick="entrar()">Entrar</button>
+      <button class="btn-main" id="l_btn" style="margin-top:16px" onclick="entrar()">Entrar</button>
       <div class="login-err" id="perr"></div>
-    </div>`;
+      <a class="foot-link" href="#visitante" style="color:var(--parchment)">← Ficha de Visitante</a>
+      <div class="ver-rodape">v${VERSAO}</div>
+    </div>
+    ${temaBtnHtml("fixo")}`;
 }
 window.entrar = async ()=>{
-  const h = await hashPin($("#pin").value.trim());
-  const role = PINS[h];
-  if(!role){ $("#perr").textContent="PIN incorreto."; return; }
-  session = { role };
-  sessionStorage.setItem("rec_sess", JSON.stringify(session));
+  const btn=$("#l_btn"); btn.disabled=true; btn.textContent="Conferindo...";
+  const role = await entrarComSenha($("#pin").value);
+  btn.disabled=false; btn.textContent="Entrar";
+  if(!role){ $("#perr").textContent="Senha incorreta."; return; }
+  if(role === "ficha"){ location.hash = "#decisao"; return; }
   renderPainel();
 };
 
@@ -423,7 +514,7 @@ async function loadData(){
     db.from("rec_decisoes").select("*").order("criado_em",{ascending:false}).limit(500)
   ]);
   cacheVis = v.data || []; cacheDec = d.data || [];
-  if(v.error||d.error) toast("Erro ao carregar dados");
+  if(v.error||d.error) toast("Erro ao carregar dados. Saia e entre de novo.");
 }
 
 function drawTab(t){
@@ -520,8 +611,7 @@ function drawOracao(){
 /* ---- Decisões (Kanban) ---- */
 let fRede = "";
 function drawKanban(){
-  const isMaster = session.role==="master";
-  if(!isMaster) fRede = session.role;
+  const isMaster = true;   // só a senha total chega ao painel
   const lista = cacheDec.filter(d => !fRede || d.rede===fRede);
   let html = "";
   if(isMaster){
@@ -703,9 +793,75 @@ function drawResumo(){
     </div>`;
 }
 
+/* ================= TEMA (sol/lua) ================= */
+function temaAtual(){
+  let t = null; try{ t = localStorage.getItem("rec_tema"); }catch(e){}
+  if(t==="claro"||t==="escuro") return t;
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
+}
+function aplicarTema(){
+  const t = temaAtual();
+  document.documentElement.dataset.theme = t==="escuro" ? "dark" : "light";
+  document.querySelectorAll(".tema-btn").forEach(b=>{
+    b.textContent = t==="escuro" ? "☀️" : "🌙";
+    b.title = b.ariaLabel = t==="escuro" ? "Mudar para modo claro" : "Mudar para modo escuro";
+  });
+}
+function temaBtnHtml(tipo){
+  const t = temaAtual();
+  return `<button class="tema-btn ${tipo==='fixo'?'tema-fixo':''}" onclick="trocarTema()"
+    aria-label="${t==='escuro'?'Mudar para modo claro':'Mudar para modo escuro'}">${t==="escuro"?"☀️":"🌙"}</button>`;
+}
+window.trocarTema = ()=>{
+  const novo = temaAtual()==="escuro" ? "claro" : "escuro";
+  try{ localStorage.setItem("rec_tema", novo); }catch(e){}
+  aplicarTema();
+};
+function rodapeHtml(){
+  return `<div class="ver-rodape">RECEBER v${VERSAO} ·
+    <a href="#" onclick="event.preventDefault();atualizarApp()">Atualizar app</a></div>`;
+}
+
+/* ================= ATUALIZAÇÃO ================= */
+// Limpa o cache e o service worker e recarrega com a versão publicada.
+window.atualizarApp = async ()=>{
+  try{
+    if("serviceWorker" in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+    if(window.caches){ const ks = await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); }
+  }catch(e){}
+  location.replace(location.pathname + "?v=" + Date.now() + location.hash);
+};
+// Lê o próprio arquivo publicado e compara a versão.
+async function verificarVersao(){
+  try{
+    const r = await fetch("index.html?nocache=" + Date.now(), { cache: "no-store" });
+    if(!r.ok) return;
+    const m = (await r.text()).match(/const VERSAO = "([^"]+)"/);
+    if(m && m[1] !== VERSAO && !$("#avisoVersao")){
+      const d = document.createElement("div");
+      d.id = "avisoVersao"; d.className = "aviso-versao";
+      d.innerHTML = `Nova versão disponível (v${esc(m[1])}).
+        <button onclick="atualizarApp()">Atualizar agora</button>`;
+      document.body.appendChild(d);
+    }
+  }catch(e){}
+}
+
 /* ================= INIT ================= */
-route();
+aplicarTema();
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", aplicarTema);
+carregarSessao().then(route);
+db.auth.onAuthStateChange((ev, s)=>{
+  if(ev === "SIGNED_OUT"){ session = null; }
+  else if(s?.user){ const role = papelDoUsuario(s.user); session = role ? { role } : null; }
+});
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+verificarVersao();
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) verificarVersao(); });
+setInterval(verificarVersao, 30*60*1000);
 </script>
 </body>
 </html>
